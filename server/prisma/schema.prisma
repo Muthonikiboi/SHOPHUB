@@ -13,44 +13,191 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Define the possible roles for a user
+enum Role {
+  RETAILER
+  SUPPLIER
+}
+
+model User {
+  id          Int        @id @default(autoincrement())
+  email       String     @unique
+  password    String
+  role        Role
+  retailer    Retailer?  @relation(fields: [retailerId], references: [id])
+  retailerId  Int?      @unique // Optional, a user can be a retailer
+  supplier    Supplier?  @relation(fields: [supplierId], references: [id])
+  supplierId  Int?      @unique // Optional, a user can be a supplier
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("users")
+}
+
 model Product {
-  id           Int      @id @default(autoincrement())
-  name         String
-  description  String?
-  price        Float
-  stock        Int
-  reorderLevel Int      @default(10)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  Supplier     Supplier @relation(fields: [supplierId], references: [id])
-  supplierId   Int
-  OrderItems   OrderItem[]
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  stockLevel  Int
+  supplier    Supplier   @relation(fields: [supplierId], references: [id])
+  supplierId  Int
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  OrderItem   OrderItem[]
+
+  Supplier Supplier[] @relation("SupplierProducts")
 }
 
 model Supplier {
-  id             Int       @id @default(autoincrement())
-  name           String
-  contactDetails String?
-  products       Product[]
-  createdAt      DateTime  @default(now())
+  id          Int        @id @default(autoincrement())
+  name        String
+  contactInfo String?    // Optional field
+  products    Product[]  @relation("SupplierProducts")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User?      // Optional: A supplier can have one associated user
+
+  Product Product[]
 }
 
+model Retailer {
+  id          Int        @id @default(autoincrement())
+  name        String
+  contactInfo String?    // Optional field
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Define the relationship with Order model
+  orders      Order[]    @relation("RetailerOrders") // Assuming a retailer can have multiple orders
+  user        User?      // Optional: A retailer can have one associated user
+
+  Order Order[]
+}
+
+
 model Order {
-  id           Int       @id @default(autoincrement())
-  totalAmount  Float
-  status       String     @default("Pending")
-  customerName String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  OrderItems   OrderItem[]
+  id          Int        @id @default(autoincrement())
+  retailer    Retailer   @relation(fields: [retailerId], references: [id])
+  retailerId  Int
+  status      String
+  items       OrderItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  Retailer Retailer[] @relation("RetailerOrders")
 }
 
 model OrderItem {
-  id         Int     @id @default(autoincrement())
-  quantity   Int
-  price      Float
-  Product    Product @relation(fields: [productId], references: [id])
-  productId  Int
-  Order      Order   @relation(fields: [orderId], references: [id])
-  orderId    Int
+  id          Int        @id @default(autoincrement())
+  order       Order      @relation(fields: [orderId], references: [id])
+  orderId     Int
+  product     Product    @relation(fields: [productId], references: [id])
+  productId   Int
+  quantity    Int
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
+
+
+
+
+
+
+
+
+
+// // This is your Prisma schema file,
+// // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// generator client {
+//    provider = "prisma-client-js"
+//  }
+ 
+//  datasource db {
+//    provider = "postgresql"
+//    url      = env("DATABASE_URL")
+//  }
+ 
+//  model Product {
+//    id          Int        @id @default(autoincrement())
+//    name        String
+//    description String?
+//    price       Float
+//    stockLevel  Int
+//    supplier    Supplier   @relation(fields: [supplierId], references: [id])
+//    supplierId  Int
+//    createdAt   DateTime   @default(now())
+//    updatedAt   DateTime   @updatedAt
+ 
+//    OrderItem OrderItem[]
+//  }
+ 
+//  model Supplier {
+//    id          Int        @id @default(autoincrement())
+//    name        String
+//    contactInfo String?
+//    user        User       @relation(fields: [userId], references: [id])
+//    userId      Int        @unique
+//    products    Product[]
+//    createdAt   DateTime   @default(now())
+//    updatedAt   DateTime   @updatedAt
+ 
+//    User User[] @relation("SupplierUser")
+//  }
+ 
+//  model Retailer {
+//    id          Int        @id @default(autoincrement())
+//    name        String
+//    contactInfo String?
+//    user        User       @relation(fields: [userId], references: [id])
+//    userId      Int        @unique
+//    createdAt   DateTime   @default(now())
+//    updatedAt   DateTime   @updatedAt
+//    Order Order[]
+ 
+//    User User[] @relation("RetailerUser")
+//  }
+ 
+//  model Order {
+//    id          Int        @id @default(autoincrement())
+//    retailer    Retailer   @relation(fields: [retailerId], references: [id])
+//    retailerId  Int
+//    status      String
+//    items       OrderItem[]
+//    createdAt   DateTime   @default(now())
+//    updatedAt   DateTime   @updatedAt
+//  }
+ 
+//  model OrderItem {
+//    id          Int        @id @default(autoincrement())
+//    order       Order      @relation(fields: [orderId], references: [id])
+//    orderId     Int
+//    product     Product    @relation(fields: [productId], references: [id])
+//    productId   Int
+//    quantity    Int
+//    createdAt   DateTime   @default(now())
+//    updatedAt   DateTime   @updatedAt
+//  }
+ 
+//  model User {
+//    id          Int        @id @default(autoincrement())
+//    name        String
+//    email       String     @unique
+//    role        Role
+//    contactInfo String?
+//    supplier    Supplier?  @relation("SupplierUser")
+//    retailer    Retailer?  @relation("RetailerUser")
+//    createdAt   DateTime   @default(now())
+//    updatedAt   DateTime   @updatedAt
+//  }
+ 
+//  enum Role {
+//    SUPPLIER
+//    RETAILER
+//  }
+ 
