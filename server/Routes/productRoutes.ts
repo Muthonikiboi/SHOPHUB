@@ -5,8 +5,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  getProductsBySupplierId,
-  resetProducts,
+  getProductsBySupplierId
 } from '../Controllers/productsController';
 
 const router = express.Router();
@@ -17,7 +16,5 @@ router.post('/create', createProduct);
 router.put('/:id', updateProduct);
 router.delete('/:id', deleteProduct);
 router.get('/supplier/:supplierId', getProductsBySupplierId);
-
-router.post("/reset-products",resetProducts)
 
 export default router;

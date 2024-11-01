@@ -82,25 +82,3 @@ export const getProductsBySupplierId = async (req: Request, res: Response): Prom
     res.status(500).json({ error: "Error fetching products for supplier" });
   }
 };
-
-export const resetProducts = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Delete related OrderItems first
-    await prisma.orderItem.deleteMany({});
-    
-    // Delete related SupplierProducts if applicable
-    // Uncomment the line below if you need to clear the SupplierProducts relation table
-    // await prisma.supplierProducts.deleteMany({}); 
-
-    // Delete all existing products
-    await prisma.product.deleteMany({});
-
-    // Reset the sequence for Product IDs
-    await prisma.$executeRaw`ALTER SEQUENCE "Product_id_seq" RESTART WITH 1;`;
-
-    res.status(200).json({ message: "Products reset successfully" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Error resetting products" });
-  }
-};
