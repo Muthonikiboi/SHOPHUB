@@ -7,10 +7,11 @@ import {
   deleteProduct,
   getProductsBySupplierId
 } from '../Controllers/productsController';
+import { protect, restrictAccess } from '../Controllers/AuthController';
 
 const router = express.Router();
 
-router.get('/', getAllProducts);
+router.get('/',protect, restrictAccess('ADMIN'), getAllProducts);
 router.get('/:id', getProductById);
 router.post('/create', createProduct);
 router.put('/:id', updateProduct);

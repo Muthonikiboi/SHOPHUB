@@ -15,6 +15,7 @@ datasource db {
 
 // Define the possible roles for a user
 enum Role {
+  ADMIN
   RETAILER
   SUPPLIER
 }
@@ -25,13 +26,14 @@ model User {
   password    String
   role        Role
   retailer    Retailer?  @relation(fields: [retailerId], references: [id])
-  retailerId  Int?      @unique // Optional, a user can be a retailer
+  retailerId  Int?      @unique 
   supplier    Supplier?  @relation(fields: [supplierId], references: [id])
-  supplierId  Int?      @unique // Optional, a user can be a supplier
+  supplierId  Int?      @unique 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   @@map("users")
+  Admin Admin[]
 }
 
 model Product {
@@ -53,20 +55,32 @@ model Product {
 model Supplier {
   id          Int        @id @default(autoincrement())
   name        String
-  contactInfo String?    // Optional field
+  contactInfo String?   
   products    Product[]  @relation("SupplierProducts")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  user        User?      // Optional: A supplier can have one associated user
+  user        User? 
 
   Product Product[]
+}
+
+model Admin{
+  id          Int        @id @default(autoincrement())
+  name        String
+  email       String
+  contactInfo String?   
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  User User? @relation(fields: [Userid], references: [id])
+  Userid Int?
 }
 
 model Retailer {
   id          Int        @id @default(autoincrement())
   name        String
-  contactInfo String?    // Optional field
+  contactInfo String?   
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -82,12 +96,23 @@ model Order {
   id          Int        @id @default(autoincrement())
   retailer    Retailer   @relation(fields: [retailerId], references: [id])
   retailerId  Int
-  status      String
+  status      OrderStatus
   items       OrderItem[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  expectedDate DateTime? 
 
   Retailer Retailer[] @relation("RetailerOrders")
+}
+
+
+// Enum for order status
+enum OrderStatus {
+  PENDING
+  APPROVED
+  SHIPPED
+  DELIVERED
+  CANCELED
 }
 
 model OrderItem {
@@ -100,104 +125,3 @@ model OrderItem {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
-
-
-
-
-
-
-
-
-
-// // This is your Prisma schema file,
-// // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-// generator client {
-//    provider = "prisma-client-js"
-//  }
- 
-//  datasource db {
-//    provider = "postgresql"
-//    url      = env("DATABASE_URL")
-//  }
- 
-//  model Product {
-//    id          Int        @id @default(autoincrement())
-//    name        String
-//    description String?
-//    price       Float
-//    stockLevel  Int
-//    supplier    Supplier   @relation(fields: [supplierId], references: [id])
-//    supplierId  Int
-//    createdAt   DateTime   @default(now())
-//    updatedAt   DateTime   @updatedAt
- 
-//    OrderItem OrderItem[]
-//  }
- 
-//  model Supplier {
-//    id          Int        @id @default(autoincrement())
-//    name        String
-//    contactInfo String?
-//    user        User       @relation(fields: [userId], references: [id])
-//    userId      Int        @unique
-//    products    Product[]
-//    createdAt   DateTime   @default(now())
-//    updatedAt   DateTime   @updatedAt
- 
-//    User User[] @relation("SupplierUser")
-//  }
- 
-//  model Retailer {
-//    id          Int        @id @default(autoincrement())
-//    name        String
-//    contactInfo String?
-//    user        User       @relation(fields: [userId], references: [id])
-//    userId      Int        @unique
-//    createdAt   DateTime   @default(now())
-//    updatedAt   DateTime   @updatedAt
-//    Order Order[]
- 
-//    User User[] @relation("RetailerUser")
-//  }
- 
-//  model Order {
-//    id          Int        @id @default(autoincrement())
-//    retailer    Retailer   @relation(fields: [retailerId], references: [id])
-//    retailerId  Int
-//    status      String
-//    items       OrderItem[]
-//    createdAt   DateTime   @default(now())
-//    updatedAt   DateTime   @updatedAt
-//  }
- 
-//  model OrderItem {
-//    id          Int        @id @default(autoincrement())
-//    order       Order      @relation(fields: [orderId], references: [id])
-//    orderId     Int
-//    product     Product    @relation(fields: [productId], references: [id])
-//    productId   Int
-//    quantity    Int
-//    createdAt   DateTime   @default(now())
-//    updatedAt   DateTime   @updatedAt
-//  }
- 
-//  model User {
-//    id          Int        @id @default(autoincrement())
-//    name        String
-//    email       String     @unique
-//    role        Role
-//    contactInfo String?
-//    supplier    Supplier?  @relation("SupplierUser")
-//    retailer    Retailer?  @relation("RetailerUser")
-//    createdAt   DateTime   @default(now())
-//    updatedAt   DateTime   @updatedAt
-//  }
- 
-//  enum Role {
-//    SUPPLIER
-//    RETAILER
-//  }
- 
