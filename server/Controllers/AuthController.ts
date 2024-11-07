@@ -4,6 +4,10 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import AppError from '../Utils/AppError';
+import { generateToken } from '../Models/resetToken';
+import { sendMail } from '../Utils/email';
+import crypto, { createHash } from 'crypto';
+
 
 dotenv.config();
 
@@ -222,6 +226,105 @@ export const restrictAccess = (...roles: string[]): any => {
     next();
   };
 };
+
+//Forget Password
+export const forgotPassword=async (req: Request, res: Response ,next:NextFunction): Promise<void>  => {
+  const { email} = req.body;
+  try{
+    const user= await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (!user) {
+      return next(new AppError('Invalid credentials', 401));
+    }
+
+    const {token, passwordResetToken,passwordResetExpires}=generateToken();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        passwordResetToken:passwordResetToken, 
+        passwordResetExpires:new Date(passwordResetExpires) 
+      }
+    })
+
+    const resetUrl=`${req.originalUrl}`;
+
+    // const message= `Forgot Your Password? \n Submit request with your password to ${resetUrl} \n if you didn't forget your password please ignore this email.`
+
+    await sendMail({
+      email: user.email,
+      subject: 'Password Reset Token (valid for 10 minutes)',
+      text: `You are receiving this email because you have requested a password reset. Please copy the token to reset your password: \n\nhttp://localhost:3000/resetPassword/${token}\n\n This link will expire in 10 minutes.`
+    });
+
+    res.status(200).json({
+      status:'success',
+      message:'Token sent to your email!'
+    })
+
+  }catch(err){
+    console.log(err);
+
+    return next(new AppError('Error sending email',500))
+  }
+}
+
+export const resetPassword= async(req: Request, res: Response ,next:NextFunction):Promise<void>=> {
+  //Get User Based on the token
+  const hashedToken =crypto.createHash("sha256").update(req.params.token).digest('hex');
+
+  const user= await prisma.user.findFirst({
+    where: {
+      passwordResetToken: hashedToken,
+      passwordResetExpires: {
+        gte: new Date(),
+      },
+    },
+  })
+  
+  if(!user){
+    return next(new AppError('Invalid or expired token', 400));
+  }
+
+  const {password}=req.body as {
+    password:string;
+  }
+
+  if(!password){
+    return next(new AppError('Password Required', 400));
+  }
+
+  const hashedPassword = await bcrypt.hash(password, Number(process.env.SALT_ROUNDS) || 10);
+
+  user.password =req.body.password;
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password:hashedPassword,
+      passwordResetToken:null,
+      passwordResetExpires:null
+    },
+  });
+
+  const token = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET as string,
+    { expiresIn: process.env.JWT_EXPIRY || '10d' }
+  );
+
+  res.status(200).json({
+    status:'success',
+    message:'Password reset successful!',
+    // token:hashedToken
+  })
+
+
+}
 
 // Get all users
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
