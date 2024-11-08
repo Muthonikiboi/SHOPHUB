@@ -3,6 +3,7 @@ import productRoutes from './Routes/productRoutes';
 import authRoutes from './Routes/authRoutes';
 import AppError from './Utils/AppError';
 import imageRoutes from './Routes/imageRoutes';
+import orderRoutes from './Routes/orderRoutes';
 import cors from "cors";
 
 const PORT = process.env.PORT || 3000;
@@ -14,6 +15,7 @@ app.use(express.json());
 // Product routes
 app.use('/api/v1/products', productRoutes);
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/orders", orderRoutes);
 app.use('/api/images', imageRoutes);
 
 //handling undefined routes

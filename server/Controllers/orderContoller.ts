@@ -30,6 +30,7 @@ export const getOrderById = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+// Create a new order
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   const { retailerId, items, expectedDate } = req.body;
   try {
@@ -57,15 +58,18 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     return next(new AppError("Error creating order",500))
   }
 };
- 
-//Delete Product
-export const deleteOrder = async (req:Request, res:Response ,next:NextFunction)=>{
+
+//cancel order
+export const cancelOrder = async (req:Request, res:Response ,next:NextFunction)=>{
    const {id}=req.params;
    try{
-      await prisma.order.delete({where:{id:parseInt(id)}});
-      res.status(204).end();
+      await prisma.order.update({
+         where:{id:parseInt(id)},
+         data:{status:'CANCELED'}
+      });
+      res.status(200).json({message:"Order cancelled successfully"});
    }catch(err){
       console.log(err);
-      return next(new AppError("Error deleting order",500));
+      return next(new AppError("Error cancelling order",500));
    }
 }
