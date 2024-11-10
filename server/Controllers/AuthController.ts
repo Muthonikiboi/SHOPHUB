@@ -22,11 +22,12 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     role: 'RETAILER' | 'SUPPLIER';
     name: string;
     contactInfo: string;
+    phoneNumber: string;
   }
-  const { email, password, passwordConfirm, role, name, contactInfo } = req.body;
+  const { email, password, passwordConfirm, role, name, contactInfo ,phoneNumber } = req.body;
 
    // Validate input fields
-   if (!email || !password || !passwordConfirm || !role || !name) {
+   if (!email || !password || !passwordConfirm || !role || !name || !contactInfo || !phoneNumber) {
       return next(new AppError('Please provide all required fields', 400));
    }
    
@@ -43,17 +44,17 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, Number(process.env.SALT_ROUNDS) || 10);
 
-    let userData: any = { email, password: hashedPassword, role };
+    let userData: any = { email, password: hashedPassword, role ,active: true};
 
     // Create supplier or retailer data depending on the role
     if (role === 'SUPPLIER') {
       const supplier = await prisma.supplier.create({
-        data: { name, contactInfo },
+        data: { name, contactInfo, phoneNumber },
       });
       userData = { ...userData, supplierId: supplier.id };
     } else if (role === 'RETAILER') {
       const retailer = await prisma.retailer.create({
-        data: { name, contactInfo },
+        data: { name, contactInfo, phoneNumber },
       });
       userData = { ...userData, retailerId: retailer.id };
     }
@@ -104,6 +105,7 @@ export const registerAdmin = async (req: Request, res: Response, next: NextFunct
         email,
         password: hashedPassword,
         role: 'ADMIN', 
+        active: true
       }
     });
 
@@ -157,6 +159,11 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     if (!user) {
       return next(new AppError('Invalid credentials', 401));
     }
+
+    //soft Delete User
+    if(!user.active){
+      return next(new AppError('This Account Does not Exist', 401));
+    } 
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
 
@@ -429,7 +436,38 @@ export const getUsersById = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-//delete user buy Id
+//Soft Delete
+export const softDeleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        supplier: true,
+        retailer: true,
+      },
+    })
+
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: { active: false },
+    });
+
+    res.json({
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    console.log(error);
+    return next(new AppError('Error soft deleting user', 500));
+  }
+};
+
+//delete user by Id
 export const deleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
 
