@@ -1,7 +1,7 @@
 // authRoutes.ts
 
 import { Router } from "express";
-import { getAllUsers, getUsersById, register,updateRetailer, updateSupplier,deleteUser, login ,registerAdmin ,protect ,restrictAccess, forgotPassword ,resetPassword} from "../Controllers/AuthController";
+import { getAllUsers, getUsersById, register,updateRetailer, updateSupplier,deleteUser, login ,registerAdmin ,protect ,restrictAccess, forgotPassword ,resetPassword, softDeleteUser} from "../Controllers/AuthController";
 
 const router = Router();
 
@@ -15,5 +15,6 @@ router.patch("/upReal/:id", updateRetailer );
 router.patch("/upSupp/:id", updateSupplier);
 router.get('/:id',protect , restrictAccess('ADMIN'), getUsersById);
 router.delete('/:id',protect, restrictAccess('ADMIN'), deleteUser);
+router.patch("/:id",softDeleteUser)
 
 export default router;
