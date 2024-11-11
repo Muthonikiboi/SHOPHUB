@@ -1,4 +1,5 @@
 prisma/
+Controllers/paymentController.ts
 # Logs
 logs
 *.log
