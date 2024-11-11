@@ -4,6 +4,7 @@ import authRoutes from './Routes/authRoutes';
 import AppError from './Utils/AppError';
 import imageRoutes from './Routes/imageRoutes';
 import orderRoutes from './Routes/orderRoutes';
+import paymentRoutes from './Routes/paymentRoutes';
 import cors from "cors";
 
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,7 @@ app.use('/api/v1/products', productRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use('/api/images', imageRoutes);
+app.use("/api/mpesa", paymentRoutes);
 
 //handling undefined routes
 app.use("*", (req:Request, res:Response,next:NextFunction) => {
