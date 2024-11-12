@@ -1,0 +1,28 @@
+/* In your CSS file */
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  0% { opacity: 0; transform: translateX(50px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bounce-once {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Tailwind classes to use these animations */
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-in-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.8s ease-in-out forwards;
+}
+
+.animate-bounce-once {
+  animation: bounce-once 1s ease-in-out forwards;
+}
