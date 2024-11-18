@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Input from "../components/generalComponents/input/input";
 import Button from "../components/generalComponents/button/button";
 import { useMutation } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { registerUser } from '../Data/data';
 import { User } from '../Data/types'; 
 import PhoneInput from 'react-phone-input-2';
+import { Toast } from 'primereact/toast';
 import 'react-phone-input-2/lib/style.css';
 
 export default function SignUp() {
@@ -19,6 +20,7 @@ export default function SignUp() {
   const [contactInfo, setContactInfo] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const toast = useRef<Toast>(null);
 
   const navigate = useNavigate();
 
@@ -32,13 +34,23 @@ export default function SignUp() {
     mutationFn: (userData: User) => registerUser(userData), 
     onSuccess: (data: any) => {
       console.log("Registration successful", data);
-      setSuccess('Registration successful!');
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Registration successful!',
+        life: 3000,
+      });
       setError('');
       navigate('/SignIn'); // Redirect on success
     },
     onError: (error: any) => {
       console.log("Registration failed", error);
-      setError("Registration failed. Please try again.");
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Registration failed. Please try again.',
+        life: 3000,
+      });
       setSuccess('');
     },
   });
@@ -46,7 +58,12 @@ export default function SignUp() {
   const handleSubmit = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Passwords do not match',
+        life: 3000,
+      });
       return;
     }
     setError("");
@@ -64,13 +81,14 @@ export default function SignUp() {
 
   return (
     <div className="flex justify-center items-center m-auto w-[100%] bg-[#EBEBEB] h-[100vh]">
+      <Toast ref={toast} />
       <div className="bg-white shadow-md rounded-md w-[35%] p-6 flex flex-col items-center">
-        <div className="w-full flex justify-center mb-4">
+        <div className="w-full flex justify-center mb-2">
           <h1 className="text-[40px] sm:text-[60px] text-[#3B9DF8] font-semibold leading-[45px] sm:leading-[70px]">
             SHOPHUB
           </h1>
         </div>
-        <div className="w-full flex justify-center mb-4">
+        <div className="w-full flex justify-center mb-2">
           <h1 className="text-[25px] text-[#000000] font-semibold leading-[45px] sm:leading-[70px] underline">
             Sign Up
           </h1>
@@ -97,7 +115,7 @@ export default function SignUp() {
           </div>
 
           {/* Role Selection */}
-          <div className="relative w-[80%] mb-10">
+          <div className="relative w-[80%] mb-5">
             <select
               id="role"
               value={role}

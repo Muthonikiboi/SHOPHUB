@@ -7,3 +7,8 @@ export interface User {
    confirmPassword: string;
    role: string;
  }
+
+ export interface loginUser{
+  email: string;
+  password: string;
+ }

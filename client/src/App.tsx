@@ -6,6 +6,9 @@ import SignUp from "./Pages/signUp"
 import SignIn from "./Pages/signIn"
 import Reset from "./Pages/resetPassword"
 import Forget from "./Pages/forgotPassword";
+import AdminDashboard from "./Pages/adminDashboard";
+import RetailerDashboard from "./Pages/retailer";
+import SupplierDashboard from "./Pages/supplier";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +22,9 @@ export default function App() {
               <Route path="/SignIn" element={<SignIn/> } /> 
               <Route path="/Reset" element={<Reset/> } /> 
               <Route path="/Forget" element={<Forget/>} /> 
+              <Route path="/AdminDashboard" element={<AdminDashboard/>} />
+              <Route path="/RetailerDashboard" element={<RetailerDashboard/>} />
+              <Route path="/SupplierDashboard" element={<SupplierDashboard/>} />
           </Routes>
         <ReactQueryDevtools initialIsOpen={false} />
       </BrowserRouter>
