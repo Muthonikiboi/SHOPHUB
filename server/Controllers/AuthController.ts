@@ -13,55 +13,74 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
-// Register a new user
-export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  type User={
-    email: string;
-    password: string;
-    passwordConfirm: string;
-    role: 'RETAILER' | 'SUPPLIER';
-    name: string;
-    contactInfo: string;
-    phoneNumber: string;
-  }
-  const { email, password, passwordConfirm, role, name, contactInfo ,phoneNumber } = req.body;
+interface RegisterUser {
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  role: Role;
+  name: string;
+  contactInfo: string;
+  phoneNumber: string;
+}
 
-   // Validate input fields
-   if (!email || !password || !passwordConfirm || !role || !name || !contactInfo || !phoneNumber) {
-      return next(new AppError('Please provide all required fields', 400));
-   }
-   
-   if (password !== passwordConfirm) {
-      return next(new AppError('Passwords do not match', 400));
-   }
-   
-   if (role !== 'RETAILER' && role !== 'SUPPLIER') {
-      return next(new AppError("Invalid role. Choose 'RETAILER' or 'SUPPLIER'", 400));
-   }
-   
+export const register = async (
+  req: Request<{}, {}, RegisterUser>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { email, password, passwordConfirm, role, name, contactInfo, phoneNumber } = req.body;
+
+  // Validate input fields
+  if (!email || !password || !passwordConfirm || !role || !name || !phoneNumber) {
+    return next(new AppError('Please provide all required fields', 400));
+  }
+
+  if (password !== passwordConfirm) {
+    return next(new AppError('Passwords do not match', 400));
+  }
+
+  if (role !== 'RETAILER' && role !== 'SUPPLIER') {
+    return next(new AppError("Invalid role. Choose 'RETAILER' or 'SUPPLIER'", 400));
+  }
 
   try {
     // Hash the password
-    const hashedPassword = await bcrypt.hash(password, Number(process.env.SALT_ROUNDS) || 10);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      Number(process.env.SALT_ROUNDS) || 10
+    );
 
-    let userData: any = { email, password: hashedPassword, role ,active: true};
-
-    // Create supplier or retailer data depending on the role
-    if (role === 'SUPPLIER') {
-      const supplier = await prisma.supplier.create({
-        data: { name, contactInfo, phoneNumber },
-      });
-      userData = { ...userData, supplierId: supplier.id };
-    } else if (role === 'RETAILER') {
-      const retailer = await prisma.retailer.create({
-        data: { name, contactInfo, phoneNumber },
-      });
-      userData = { ...userData, retailerId: retailer.id };
-    }
-
-    // Create the user with associated data
+    // Create user with nested creation of supplier or retailer
     const newUser = await prisma.user.create({
-      data: userData as Prisma.UserCreateInput,
+      data: {
+        email,
+        password: hashedPassword,
+        role,
+        active: true,
+        ...(role === 'SUPPLIER'
+          ? {
+              supplier: {
+                create: {
+                  name,
+                  contactInfo,
+                  phoneNumber,
+                },
+              },
+            }
+          : {
+              retailer: {
+                create: {
+                  name,
+                  contactInfo,
+                  phoneNumber,
+                },
+              },
+            }),
+      },
+      include: {
+        supplier: true,
+        retailer: true,
+      },
     });
 
     // Generate a JWT token
@@ -71,19 +90,42 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       { expiresIn: process.env.JWT_EXPIRY || '10d' }
     );
 
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = newUser;
+
     res.status(201).json({
+      status: 'success',
       message: 'User registered successfully',
       token,
-      newUser,
+      data: {
+        user: userWithoutPassword,
+      },
     });
   } catch (error) {
-   console.log(error);
-   return next(new AppError('Error creating user', 500));
+    // Check for unique constraint violation
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return next(new AppError('Email already exists', 400));
+      }
+    }
+    
+    console.error('Registration error:', error);
+    return next(new AppError('Error creating user', 500));
   }
 };
 
-// Admin registration endpoint (not exposed to frontend)
-export const registerAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+interface RegisterAdmin {
+  email: string;
+  password: string;
+  name: string;
+  contactInfo?: string;
+}
+
+export const registerAdmin = async (
+  req: Request<{}, {}, RegisterAdmin>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const { email, password, name, contactInfo } = req.body;
 
   // Validate input fields
@@ -91,52 +133,66 @@ export const registerAdmin = async (req: Request, res: Response, next: NextFunct
     return next(new AppError('Please provide all required fields', 400));
   }
 
-  // Password validation can be added here
+  // Password validation
   if (password.length < 6) {
     return next(new AppError('Password must be at least 6 characters long', 400));
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, Number(process.env.SALT_ROUNDS) || 10);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      Number(process.env.SALT_ROUNDS) || 10
+    );
 
-    // Create the admin user in the User model
+    // Create user with nested creation of admin
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
-        role: 'ADMIN', 
-        active: true
-      }
+        role: 'ADMIN',
+        active: true,
+        admin: {
+          create: {
+            name,
+            contactInfo,
+          },
+        },
+      },
+      include: {
+        admin: true,
+      },
     });
 
-    // Create the associated admin record
-    const newAdmin = await prisma.admin.create({
-      data: {
-        name,
-        email,
-        contactInfo,
-        User: { connect: { id: newUser.id } } 
-      }
-    });
-
-    // Generate a JWT token for the admin user
+    // Generate a JWT token
     const token = jwt.sign(
       { id: newUser.id, role: newUser.role },
       process.env.JWT_SECRET as string,
       { expiresIn: process.env.JWT_EXPIRY || '10d' }
     );
 
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = newUser;
+
     res.status(201).json({
+      status: 'success',
       message: 'Admin registered successfully',
       token,
-      newAdmin,
+      data: {
+        user: userWithoutPassword,
+      },
     });
   } catch (error) {
-    console.log(error);
+    // Check for unique constraint violation
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return next(new AppError('Email already exists', 400));
+      }
+    }
+
+    console.error('Admin registration error:', error);
     return next(new AppError('Error creating admin user', 500));
   }
 };
-
 
 
 // Login a user
@@ -417,7 +473,14 @@ export const getUsersById = async (req: Request, res: Response, next: NextFuncti
     const user = await prisma.user.findUnique({
       where: { id: parseInt(id) },
       include: {
-        supplier: true,
+        supplier:  {
+          include: {
+            products: {
+              include:{
+                orderItems:true
+              }
+            },  
+          }},
         retailer: true,
       },
     });

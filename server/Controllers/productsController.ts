@@ -1,13 +1,18 @@
 import { NextFunction, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import AppError from '../Utils/AppError';
+import { decodeTokenId, simulateToken } from "../Utils/decodeToken";
 
 const prisma = new PrismaClient();
 
 // Get all products
 export const getAllProducts = async (req: Request, res: Response ,next:NextFunction)=> {
   try {
-    const products = await prisma.product.findMany();
+    const products = await prisma.product.findMany({
+      include:{
+        supplier: true,
+      }
+    });
     res.json(products);
   } catch (error) {
     return next(new AppError("Error fetching products" ,500))
@@ -20,6 +25,9 @@ export const getProductById = async (req: Request, res: Response ,next:NextFunct
   try {
     const product = await prisma.product.findUnique({
       where: { id: parseInt(id) },
+      include:{
+        supplier: true,
+      }
     });
     if (!product) {
       return next(new AppError("Product not found" ,500))
@@ -31,16 +39,60 @@ export const getProductById = async (req: Request, res: Response ,next:NextFunct
 };
 
 // Create a new product
-export const createProduct = async (req: Request, res: Response ,next:NextFunction)=> {
-  const { name, description, price, supplierId, stockLevel } = req.body;
+export const createProduct = async (req: any, res: Response, next: NextFunction) => {
+  // Step 1: Simulate token verification and get the token
+  const token = await simulateToken(req, res, next);
+
+  if (!token) {
+    return next(new AppError("Token not verified", 401));
+  }
+
+  // Step 2: Decode the token to get the user ID
+  const userId = decodeTokenId(token);
+
+  // Step 3: Fetch the user and include their associated supplier
+  const user:any = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      supplier: {
+        select: {
+          id: true, // We only need the supplier ID
+        }
+      },
+    },
+  });
+
+  // Step 4: Extract the supplierId from the user object
+  const supplierId:any= user.supplier.id;
+  console.log(supplierId);
+
+  // Step 5: If no supplierId, return an error
+  if (!supplierId) {
+    return next(new AppError("Supplier not found", 404));
+  }
+
+  // Step 6: Extract product details from the request body
+  const { name, description, price, stockLevel } = req.body;
+
+  // Step 7: Create the new product
   try {
     const newProduct = await prisma.product.create({
-      data: { name, description, price, supplierId, stockLevel },
+      data: {
+        name,
+        description,
+        price,
+        supplierId, // Correctly use the supplierId from the supplier relation
+        stockLevel,
+      },
     });
+
+    // Step 8: Return the newly created product
+    console.log(newProduct);
+
     res.status(201).json(newProduct);
   } catch (error) {
-   console.log(error)
-    return next(new AppError("Error creating product" ,500))
+    console.log(error);
+    return next(new AppError("Error creating product", 500));
   }
 };
 

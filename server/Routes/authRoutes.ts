@@ -10,11 +10,14 @@ router.post("/registerAdmin", registerAdmin)
 router.post("/login",login)
 router.post("/forgotPassword",forgotPassword)
 router.patch("/resetPassword/:token",resetPassword);
-router.get('/', protect,  restrictAccess('ADMIN'),getAllUsers);
+// router.get('/', protect,  restrictAccess('ADMIN'),getAllUsers);
+router.get("/",getAllUsers)
 router.patch("/upReal/:id", updateRetailer );
 router.patch("/upSupp/:id", updateSupplier);
-router.get('/:id',protect , restrictAccess('ADMIN'), getUsersById);
-router.delete('/:id',protect, restrictAccess('ADMIN'), deleteUser);
+// router.get('/:id',protect , restrictAccess('ADMIN'), getUsersById);
+router.get('/:id',getUsersById);
+// router.delete('/:id',protect, restrictAccess('ADMIN'), deleteUser);
+router.delete('/:id', deleteUser);
 router.patch("/:id",softDeleteUser)
 
 export default router;
